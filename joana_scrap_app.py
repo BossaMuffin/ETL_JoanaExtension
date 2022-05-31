@@ -9,7 +9,8 @@
 
 # # SCRAPPING JOANA&VOUS 
 
-# In[1]:
+# configuration file (login, CONST...)
+import config
 
 import lib_display as ds
 from fake_useragent import UserAgent 
@@ -25,7 +26,6 @@ import pandas as pd
 import tkinter as tkt
 import webbrowser
 
-# In[2]:
 week_days = [
     'lundi', 
     'mardi', 
@@ -38,23 +38,23 @@ week_days = [
 
 url_login = 'https://api.joanaetvous.com/auth/jwt/create/'
 url_api = 'https://api.joanaetvous.com/'
-url_app ='your mail'
-password = 'your password'
+url_app = 'https://app.joanaetvous.com/'
+email =  config.EMAIL
+password = config.PASSWORD
 
 # export and formated datas file
 week_file_prefixe = "joanna_scrap_"
 week_date_deb = "default"
 
+
 def construct_files_path(date = week_date_deb):
     r =  {}
     r['week'] = week_file_prefixe + date + ".json"
-    r['ingredients'] = week_file_prefixe + 'ingredients_' + week_date_deb + ".txt"
+    r['ingredients'] = week_file_prefixe + 'ingredients_' + date + ".txt"
     
     return r 
-
 #week_data_file = construct_files_path()['week']
 #week_ingredients_file = construct_files_path()['ingredients']
-
 
 # Log to Joann&vous
 def login(mail, pwd, headers):
@@ -65,7 +65,7 @@ def login(mail, pwd, headers):
     }
     with s.post(url_login, json = payload, headers=headers) as res:
         s.headers.update({'authorization': 'Bearer '+ json.loads(res.content)['access']})
-        #print(res.content)
+
     return s
 
 # Get json answer from Joana API
@@ -73,9 +73,9 @@ def get_json_answer(session, target, uuid=''):
     r = ''
     with session.get(url_api+target+uuid, headers=headers) as resp:
         r = resp.json()
-        #resp.headers
-        #print(type(resp))
+        
     return r
+
 
 def get_header():
     # Add a header giving a random user agent
@@ -83,11 +83,10 @@ def get_header():
     headers = {'user-agent': ua}
     return headers
 
+
 def return_joana_account_session(headers):
 
     current_session = login(email, password, headers)
-
-    # In[5]:
 
     print('JOANA - SESSION CONNEXION :')
     print('\n')
@@ -97,6 +96,7 @@ def return_joana_account_session(headers):
     print('Headers : ', current_session.headers)
     
     return current_session
+
 
 def return_joana_session_meta(session):
     r = {}
@@ -108,7 +108,9 @@ def return_joana_session_meta(session):
     
     return r
 
+
 def isFile(filePath):
+
     try:
         with open(filePath, 'r') as f:
             return True
@@ -117,6 +119,7 @@ def isFile(filePath):
     except IOError as e:
         return False
 
+    
 def scrap_current_week(headers):
     week_datas = {}
     week_datas = week_datas.fromkeys(week_days, 'np_matrix')
@@ -129,12 +132,7 @@ def scrap_current_week(headers):
     week_pdf = week_meta['week_pdf']
     uuid_jours = week_meta['uuid_jours']
 
-    # In[8]:
-
-
     infos_week = [get_json_answer(current_session, 'weekday/', uuid) for uuid in uuid_jours]
-
-    # In[9]:
 
     # jours de 0 à 7 // meals de 1 à 3 // dish de 1 à ?
     ds.printn(2)
@@ -181,16 +179,12 @@ def scrap_current_week(headers):
                     ds.countdown(temp_time, step=1, show=False, space=0)
                     print('    > "', recettes[i][k]['ingredients'][j]['name'], '"')
 
-    mail_notif()
-    # In[11]:
-
     json_object = json.dumps(recettes, indent = 4)
     
     week_data_files = construct_files_path(week_date_deb)
 
     with open(week_data_files['week'], "w") as outfile:
         outfile.write(json_object)
-    
 
 
 # In[2]:
@@ -198,15 +192,13 @@ def scrap_current_week(headers):
 
 ## ENVOYER UN EMAIL
 # on rentre les renseignements pris sur le site du fournisseur
-smtp_address = 'smtp.ionos.fr'
-smtp_port = 465
-
+smtp_address = config.SMTP_ADDRESS
+smtp_port = config.SMTP_PORT
 # on rentre les informations sur notre adresse e-mail
-email_address = 'engineer@bossamuffin.com'
-email_password = 'Alan_BM-48-47..Mail!'
-
+email_address = config.SMTP_EMAIL
+email_password = config.SMTP_PASSWORD
 # on rentre les informations sur le destinataire
-email_receiver = '4u.mehus@gmail.com'
+email_receiver = config.SMTP_RECEIVER
 
 
 def mail_notif():
@@ -258,7 +250,6 @@ def mail_notif():
         # envoi du mail
         server.sendmail(email_address, email_receiver, message.as_string())
         print('Notification mail envoyée à : ', email_receiver, '\n                        par : ', email_address )
-        
 
 
 # In[3]:
@@ -276,19 +267,29 @@ with return_joana_account_session(headers) as current_session:
         print('>> Week isn\'t scrapped yet')
         print('>> Scrapping process')
         ds.printn()
+        
         scrap_current_week(headers)
+        
         ds.printn()
         print('>> Scrapping is done')
+        ds.printn()
+        print('>> Sending a notif email')
+        
+        try: mail_notif()
+        except SMTPAuthenticationError as err:
+            print('>> Sending failed :', err)
+        else: 
+            print('>> Sending ok')
+        
         ds.printn()
     
     week_data_files = construct_files_path(week_meta['week_date_deb'])
 
 
-# In[28]:
+# In[4]:
 
 
 ## Week_days is in joana_scraping !!
-
 temp_recettes = ""
     
 with open(week_data_files['week'], "r") as infile:
@@ -311,35 +312,33 @@ options = [
 print('Chargement ...')
 ds.printn(2)
 
-# In[3]:
 
 def show_meals(opt=1):
     
-    r = options[opt] + ' :\n'
+    text_to_return = options[opt] + ' :\n'
     day_i = 0
     for day_meals in temp_recettes.values():  
 
-        print('\n')
-        print(separator)
-        print(week_days[day_i])
+        text_to_return += '\n'
+        text_to_return += separator
+        text_to_return += week_days[day_i]
         day_i += 1
 
         for day_meal in day_meals.values():
-            r += '\n'
+            text_to_return += '\n'
 
-            r += '>' + day_meal['name']
-            r += '\n'
+            text_to_return += '>' + day_meal['name']
+            text_to_return += '\n'
             if int(day_meal['portions']) and day_meal['portions'] > 0:
-                r += f"\n{'-':<5}{'pour':<10}{day_meal['portions']:<5}{'pax'}"
+                text_to_return += f"\n{'-':<5}{'pour':<10}{day_meal['portions']:<5}{'pax'}"
 
             if int(day_meal['preparation_time']) and day_meal['preparation_time'] > 0:
-                r += f"\n{'-':<5}{'compte':<10}{day_meal['preparation_time']:<5}{'min de prépa'}"
+                text_to_return += f"\n{'-':<5}{'compte':<10}{day_meal['preparation_time']:<5}{'min de prépa'}"
 
             if int(day_meal['cooking_time']) and day_meal['cooking_time'] > 0:
-                r += f"\n{'-':<5}{'et':<10}{day_meal['cooking_time']:<5}{'min de cuisson'}"
-    return r
+                text_to_return += f"\n{'-':<5}{'et':<10}{day_meal['cooking_time']:<5}{'min de cuisson'}"
+    return text_to_return
        
-# In[4]:
 
 def change_portions(opt=2):
     print(options[opt], ' :')
@@ -354,7 +353,6 @@ def change_portions(opt=2):
             print(week_days[day_i])
             day_i += 1
 
-
             for day_meal in day_meals.values():
 
                 if portion != "stop":
@@ -365,19 +363,9 @@ def change_portions(opt=2):
                     print('\n')
                     print ('>', day_meal['name'])
 
-                    
                     ds.countdown(0, show=False)
                     
                     print(f"{'-':<5}{'Actuellement pour ':<20}{day_meal['portions']:<5}{'pax'}")
-                    '''      
-                    if int(day_meal['portions']) and int(day_meal['portions']) > 0:
-                        print(f"{'-':<5}{'Actuellement pour ':<20}{day_meal['portions']:<5}{'pax'}")
-                    elif int(day_meal['portions']) and int(day_meal['portions']) == 0:
-                        print(f"{'-':<5}{'Actuellement pour ':<20}{'0':<5}{'pax'}")
-                    else: 
-                        print('Erreur système : mauvaise data.json "portions"')
-                        break
-                    '''
                           
                     while portion not in ["next", "stop"]:
                         portion = input(f"{'-':<5}{'Pour combien de pax ? (sinon <stop> ou <next>)'}")
@@ -394,9 +382,6 @@ def change_portions(opt=2):
                             elif portion == "stop":
                                 break
 
-                        #elif int(portion) > 0:
-
-                        #print(day_meal['portions'])
                         for ingredient in day_meal['ingredients'].values():
 
                             if ingredient['quantity'] != 0:
@@ -405,8 +390,7 @@ def change_portions(opt=2):
                                     ingredient['quantity'] = (ingredient['quantity'] / day_meal['portions'] ) * float(portion)
                                 except ZeroDivisionError:
                                      ingredient['quantity'] = ingredient['quantity'] * float(portion)
-                                #print('->', temp_ingr_quant, '>', ingredient['quantity'], ' ', ingredient['unit_of_measure']['symbol'] )
-
+                                
                         plural=''
                         if int(portion) > 1:plural = 's'
 
@@ -426,41 +410,42 @@ def change_portions(opt=2):
             print('Fin de la procédure')
             break
 
-# In[5]:
 
 def show_ingredients(opt=3):
-    print(options[3], ' :')
-
+                                        
+    text_to_return = options[opt] + ' :\n'
+                                        
     for i, ingredient_group in order_ingredients_in_df().items():
         line = f"{'>':<5}{ingredient_group}"
-        r = r + '\n' + line
-    return(r)
-
-# In[7]:
+        text_to_return = text_to_return + '\n' + line
+    
+    return(text_to_return)
+                                        
 
 def print_ingredients_in_file(opt=4):
-    print(options[4], ' :')
-                                        
+    
+    text_to_return = options[opt] + ' :\n'                                    
     nb_lines = 0
+    
     with open(week_data_files['ingredients'], "w") as outfile:
         outfile.write('LISTE DES INGREDIENTS DE LA SEMAINE \n-----------------\n\n')
         
         for i, ingredient_group in order_ingredients_in_df().items():
             line = f"{'+':<5}{ingredient_group}"
-            print(line)
+            text_to_return = text_to_return + '\n' + line
             outfile.write(line + '\n')
             nb_lines += 1
-        
-    return nb_lines
-   
-# In[8]:
+    
+    text_to_return += str(nb_lines)
+                                        
+    return text_to_return
 
 ingredient_list = [('','','')]
 df_ingredients = pd.DataFrame(columns = ['Category', 'Name' , 'Quantity', 'Symbol'])
 
+                                        
 def order_ingredients_in_df():
-    print('Tri des ingrédients :')
-    
+        
     nb_lines = 0
     
     for day_meals in temp_recettes.values():  
@@ -495,12 +480,11 @@ def order_ingredients_in_df():
                     df_ingredients.loc[nb_lines] = [ ingredient['category']['name'], ingredient['name'], ingredient['quantity'], symbol ]
                     ingredient['unit_of_measure']['symbol'] = symbol
                     nb_lines += 1
-    #print(nb_lines)
+
     df_ingredients_sorted = df_ingredients.groupby(['Category', 'Name', 'Symbol']).sum()
 
     return df_ingredients_sorted
 
-# In[9]:
 
 def init_zero_and_two_portion_to_one():
     
@@ -523,10 +507,11 @@ def init_zero_and_two_portion_to_one():
 init_zero_and_two_portion_to_one()
 
 
-# In[29]:
+# In[5]:
 
 
-# In[1]:
+# APP VIEW
+
 shop_url = 'https://www.intermarche.com/accueil'
 bg_clr = '#41B77F'
 txt_clr = 'white'
@@ -535,9 +520,6 @@ min_size_L = 480
 min_size_H = 360
 logo_ico = 'logo.ico'
 border = 1
-
-
-# In[3]:
    
 # hide a frame
 def hide_frame():
@@ -550,7 +532,7 @@ def view_menu():
 
 # change portions of meals
 def change_portions():
-    change_portions(opt=2)
+    #change_portions()
     
     frame_buttons.pack_forget()
     frame_content.pack_forget()
@@ -559,12 +541,14 @@ def change_portions():
         
 # show the list of all necessary ingredients
 def view_ingredients():
-    show_ingredients()
-    text_to_show.set('Import : Liste des ingrédient')
+    text = show_ingredients()
+    text_to_show.set(text)
     
 # export the list of all necessary ingredients
 def export_ingredients():  
-    print(print_ingredients_in_file(opt=4), ' >>>   Ingrédients ajoutés au fichier de la semaine')
+    text = print_ingredients_in_file()
+    print('>>>   Ingrédients ajoutés au fichier de la semaine')
+    text_to_show.set(text)
 
 # open the shop webpage
 def open_shop(url=shop_url):
@@ -580,9 +564,6 @@ def stop_app(w=window):
 # def text():
 #     frame_buttons.delete(0, END)
 #     frame_buttons.insert(0, 'Hello world')
-# 
-
-# In[4]:
 
 # Create the navigation bar
 nav_bar = tkt.Menu(window)
@@ -592,8 +573,6 @@ opt_nav.add_command(label='Imprimer', command=view_ingredients)
 opt_nav.add_command(label='Quitter', command=stop_app)
 nav_bar.add_cascade(label="Options", menu=opt_nav)
 
-# In[5]:
-
 # Configure the window
 window.title("Je t'aime mon âme d'am°°°")
 window.geometry(gtry)
@@ -601,15 +580,11 @@ window.minsize(min_size_L, min_size_H)
 #window.iconbitmap("logo.ico")
 window.config(menu=nav_bar, background=bg_clr, bd=1, relief='sunken')
 
-# In[6]:
-
 # Create the frames
 frame_title = tkt.Frame(window, bd=border,bg=bg_clr)
 frame_buttons = tkt.Frame(window, bd=border, bg=bg_clr)
 frame_change = tkt.Frame(window, bd=border, bg=bg_clr)
 frame_content = tkt.Frame(window, bd=border, bg=bg_clr)
-
-# In[7]:
 
 # Add texts
 label_title = tkt.Label(frame_title, text='Menu de la semaine', font=("Arial", 30), bd=border, bg=bg_clr, fg=txt_clr)
@@ -637,15 +612,13 @@ ingredients_button = tkt.Button(frame_buttons,
                         command=view_ingredients)
 export_button = tkt.Button(frame_buttons, 
                         text=options[4], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
-                        command=hide_frame)
+                        command=export_ingredients)
 shop_button = tkt.Button(frame_buttons, 
                         text=options[5], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
                         command=open_shop)
 quit_button = tkt.Button(frame_buttons, 
                         text=options[6], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
                         command=window.destroy)
-
-# In[8]:
 
 # Add pictures
 '''
@@ -656,8 +629,6 @@ canvas = Canvas(window, width=width, height=height, bg=bg_clr, bd=0, highlightti
 canvas.create_image(width/2, height/2, image=image)
 '''
 
-# In[9]:
-
 # Show content
 #label_title.pack(side=LEFT)
 label_title.pack(expand='yes')
@@ -666,7 +637,6 @@ label_subtitle.pack(expand='yes')
 frame_title.pack(expand='yes')
 
 # Show button
-
 menu_button.grid(row=0, column=0, pady=10)
 change_button.grid(row=0, column=1, pady=10)
 ingredients_button.grid(row=1, column=0, pady=10)
@@ -682,8 +652,6 @@ label_changing.pack(expand='yes')
 label_content.pack(expand='yes')
 frame_content.pack(expand=1)
 #canvas.pack(expand=YES)
-
-# In[ ]:
 
 # Show the app
 window.mainloop()
