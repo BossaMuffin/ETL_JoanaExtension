@@ -57,15 +57,17 @@ def construct_files_path(date = week_date_deb):
 #week_ingredients_file = construct_files_path()['ingredients']
 
 # Log to Joann&vous
-def login(mail, pwd, headers):
+def login(mail, pwd, header):
     s = requests.Session()
+    s.headers.update(header)
     payload = {
         'email' : mail,
         'password' : pwd
     }
-    with s.post(url_login, json = payload, headers=headers) as res:
+    
+    with s.post(url_login, json = payload, headers=header) as res:
         s.headers.update({'authorization': 'Bearer '+ json.loads(res.content)['access']})
-
+        
     return s
 
 # Get json answer from Joana API
@@ -78,9 +80,32 @@ def get_json_answer(session, target, uuid=''):
 
 
 def get_header():
+    headers = {
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'cache-control': 'max-age=0',
+        'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Linux"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'none',
+        'sec-fetch-user': '?1',
+        'upgrade-insecure-requests': '1',
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36', 
+        'Accept-Encoding': 'gzip, deflate', 
+        'Accept': '*/*', 
+        'Connection': 'keep-alive'}
+    
     # Add a header giving a random user agent
-    ua = UserAgent().random
-    headers = {'user-agent': ua}
+    try: 
+        ua = UserAgent().random
+        headers['User-Agent'] = ua
+    except IndexError :
+        print(IndexError)
+    else:
+        print("User-Agent Error")
     return headers
 
 
@@ -114,13 +139,12 @@ def isFile(filePath):
     try:
         with open(filePath, 'r') as f:
             return True
-    except FileNotFoundError as e:
-        return False
-    except IOError as e:
+    except (FileNotFoundError, IOError) as e:
         return False
 
     
 def scrap_current_week(headers):
+    text_to_return = '\n'
     week_datas = {}
     week_datas = week_datas.fromkeys(week_days, 'np_matrix')
 
@@ -135,19 +159,17 @@ def scrap_current_week(headers):
     infos_week = [get_json_answer(current_session, 'weekday/', uuid) for uuid in uuid_jours]
 
     # jours de 0 à 7 // meals de 1 à 3 // dish de 1 à ?
-    ds.printn(2)
-    print('###', week_date_deb, '###')
-    ds.printn(2)
+    
+    text_to_return = text_to_return + '\n\n###' +  week_date_deb + '###\n\n'
 
     recette_uuid = ''
 
     for i, day in enumerate(week_days):
-        print('\n\n\n------------\n', day, '\n------------')
+        text_to_return = text_to_return + '\n\n\n------------\n' + day + '\n------------'
         recettes[i] = {}
         k = 0
         for meals in infos_week[i]['meals'][1:]:
-            ds.printn(1)
-            print(meals['category']['name'])
+            text_to_return = text_to_return + '\n' + meals['category']['name'] 
             for temp, dish in enumerate(meals['meal']['dishes']):
                 # Add to the recettes global list
                 k+=1
@@ -161,8 +183,8 @@ def scrap_current_week(headers):
 
                 recettes[i][k]['days'] = day
                 recettes[i][k]['category'] = meals['category']['name']
-                print('\n')
-                print(k, ' : ', dish['dish']['name'], ' > add to the list (', recettes[i][k]['display'], ')')
+
+                text_to_return = text_to_return + '\n' + "% s" % k + ' : ' + dish['dish']['name'] + ' > add to the list'
 
                 infos_dish = get_json_answer(current_session, 'dish/', recettes[i][k]['id'])
                 recettes[i][k]['instructions'] = infos_dish['instructions']
@@ -177,7 +199,7 @@ def scrap_current_week(headers):
                     recettes[i][k]['ingredients'][j]['unit_of_measure'] = ingredient['unit_of_measure']
                     temp_time = random.randrange(3)
                     ds.countdown(temp_time, step=1, show=False, space=0)
-                    print('    > "', recettes[i][k]['ingredients'][j]['name'], '"')
+                    text_to_return = text_to_return + '    > "' + recettes[i][k]['ingredients'][j]['name'] + '"'
 
     json_object = json.dumps(recettes, indent = 4)
     
@@ -185,6 +207,8 @@ def scrap_current_week(headers):
 
     with open(week_data_files['week'], "w") as outfile:
         outfile.write(json_object)
+    
+    return text_to_return
 
 
 # In[2]:
@@ -543,7 +567,14 @@ def change_portions():
 def view_ingredients():
     text = show_ingredients()
     text_to_show.set(text)
+
+# force te API scrapping
+def force_scrap():  
     
+    text = scrap_current_week(headers)
+    print('>>>   Semaine scrappée')
+    text_to_show.set(text)    
+
 # export the list of all necessary ingredients
 def export_ingredients():  
     text = print_ingredients_in_file()
@@ -568,7 +599,7 @@ def stop_app(w=window):
 # Create the navigation bar
 nav_bar = tkt.Menu(window)
 opt_nav=tkt.Menu(nav_bar, tearoff=0)
-opt_nav.add_command(label='Scrap /!\\', command=scrap_current_week)
+opt_nav.add_command(label='Scrap /!\\', command=force_scrap)
 opt_nav.add_command(label='Imprimer', command=view_ingredients)
 opt_nav.add_command(label='Quitter', command=stop_app)
 nav_bar.add_cascade(label="Options", menu=opt_nav)
@@ -655,6 +686,12 @@ frame_content.pack(expand=1)
 
 # Show the app
 window.mainloop()
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
