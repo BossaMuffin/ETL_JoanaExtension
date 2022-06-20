@@ -8,6 +8,7 @@
 # configuration CONST file (login, smtp...)
 import config
 # libraries
+import copy
 import requests, json
 import lib_display as ds
 import random
@@ -74,7 +75,7 @@ class Scrap:
         self.current_session = {}
         self.week_pdf = ""
         self.days_uuid = []
-        self.temp_recettes = ""
+        self.temp_recettes = {}
         
         # Les choix proposés au menu du programme sont compris entre l'indice 1 et l'avant-dernier (réservés au titre et à la question)
         self.OPTIONS = [
@@ -87,9 +88,6 @@ class Scrap:
             "Quitter",
             "Quelle action choisis-tu ?",  
         ]
-        
-        self.df_ingredients = pd.DataFrame(columns = ['Category', 'Name' , 'Quantity', 'Symbol'])
-
         
     def constructFilesPath(self):
         e_files_path =  {}
@@ -207,7 +205,7 @@ class Scrap:
         e_json_object = {}
         e_week_files_path = {}
         
-        e_infos_week = [self.getJsonAnswer('weekday/', l_uuid) for l_uuid in e_days_uuid]
+        e_infos_week = [self.getJsonAnswer('weekday/', l_uuid) for l_uuid in self.days_uuid]
         
         e_text_to_return = e_text_to_return + '\n\n###' +  self.week_date_deb + '###\n\n'
         print('\n\n###',  self.week_date_deb, '###\n\n' )
@@ -244,6 +242,7 @@ class Scrap:
                     #g_text_to_show.set(text_to_return)
                     #g_label_content.update()
                     l2_infos_dish = self.getJsonAnswer('dish/', e_recettes[l0_i][l0_k]['id'])
+                    print('ok')
                     e_recettes[l0_i][l0_k]['instructions'] = l2_infos_dish['instructions']
                     e_recettes[l0_i][l0_k]['ingredients'] = {}
                     for l3_j, l3_ingredient in enumerate(l2_infos_dish['ingredients']):
@@ -254,7 +253,7 @@ class Scrap:
                         e_recettes[l0_i][l0_k]['ingredients'][l3_j]['unit_of_measure'] = {}
                         e_recettes[l0_i][l0_k]['ingredients'][l3_j]['unit_of_measure'] = l3_ingredient['unit_of_measure']
                         l3_temp_time = random.randrange(3)
-                        ds.countdown(l3_temp_time, step=1, show=False, space=0)
+                        ds.countdown(l3_temp_time, p_step=1, p_show=False, p_space=0)
                         e_text_to_return = e_text_to_return + '    > "' + e_recettes[l0_i][l0_k]['ingredients'][l3_j]['name'] + '"'
                         print(e_recettes[l0_i][l0_k]['ingredients'][l3_j]['name'])
                         #g_text_to_show.set(e_text_to_return)
@@ -293,20 +292,27 @@ class Scrap:
         self.initPortionsToOne()
     
     def initPortionsToOne(self):
-        for l0_day_meals in self.temp_recettes.values():  
-            for l1_day_meal in l0_day_meals.values():
+        for l0_i, l0_day_meals in enumerate(self.temp_recettes.values()):  
+            for l1_i, l1_day_meal in enumerate(l0_day_meals.values()):
                 l1_day_meal['portions'] = 1
-                for l2_ingredient in l1_day_meal['ingredients'].values():
+                #self.temp_recettes[str(l0_i)][str(l1_i+1)]['portions'] = 1
+                for l2_i, l2_ingredient in enumerate(l1_day_meal['ingredients'].values()):
                     if l2_ingredient['quantity'] != 0:
                         l2_ingredient['quantity'] = l2_ingredient['quantity'] / l1_day_meal['portions']
-
+                        #self.temp_recettes[str(l0_i)][str(l1_i+1)]['ingredients'][str(l2_i)]['quantity'] = l2_ingredient['quantity']
 
     def orderIngredientsInDf(self):
+        e_df_ingredients = pd.DataFrame(columns = ['Category', 'Name' , 'Quantity', 'Symbol'])
         e_nb_lines = 0
-        for l0_day_meals in self.temp_recettes.values():  
+        e_temp_recettes = {}
+        e_temp_recettes = copy.deepcopy(self.temp_recettes)
+        for l0_day_meals in e_temp_recettes.values():  
             for l1_day_meal in l0_day_meals.values():
                 if l1_day_meal['portions'] != 0:
                     for l2_ingredient in l1_day_meal['ingredients'].values():
+                        # change ingredients quantity by portions 
+                        l2_ingredient['quantity'] = l2_ingredient['quantity'] * l1_day_meal['portions']
+
                         if l2_ingredient['unit_of_measure']['symbol'] != None:
                             l2_symbol = l2_ingredient['unit_of_measure']['symbol']
                         else:
@@ -327,10 +333,10 @@ class Scrap:
                         elif l2_symbol == 'l':
                             l2_ingredient['quantity'] = l2_ingredient['quantity']*1000
                             l2_symbol = 'ml'
-                        self.df_ingredients.loc[e_nb_lines] = [ l2_ingredient['category']['name'], l2_ingredient['name'], l2_ingredient['quantity'], l2_symbol ]
+                        e_df_ingredients.loc[e_nb_lines] = [ l2_ingredient['category']['name'], l2_ingredient['name'], l2_ingredient['quantity'], l2_symbol ]
                         l2_ingredient['unit_of_measure']['symbol'] = l2_symbol
                         e_nb_lines += 1
-        e_df_ingredients_sorted = self.df_ingredients.groupby(['Category', 'Name', 'Symbol']).sum()
+        e_df_ingredients_sorted = e_df_ingredients.groupby(['Category', 'Name', 'Symbol']).sum()
         return e_df_ingredients_sorted
 
 
@@ -357,80 +363,31 @@ class Scrap:
                 if int(l1_day_meal['cooking_time']) and l1_day_meal['cooking_time'] > 0:
                     e_text_to_return += f"\n{'-':<5}{'et':<10}{l1_day_meal['cooking_time']:<5}{'min de cuisson'}"
 
-        print(e_text_to_return)
+        #print(e_text_to_return)
         return e_text_to_return
-
-
-    def updatePortions(self):
-        print(self.OPTIONS[2], ' :')
-        e_text_to_return = options[opt]
-        e_day_i = 0
-        e_portion = 0
-
-        for l0_day_meals in self.temp_recettes.values():  
-
-            if e_portion != "stop":
-                print('\n')
-                ds.separator()
-                print(self_WEEK_DAYS[e_day_i])
-                e_day_i += 1
-
-                for l1_day_meal in l0_day_meals.values():
-
-                    if e_portion != "stop":
-                        e_portion = 0
-                        print('\n')
-                        #print(day_meal)
-                        ds.separator()
-                        print('\n')
-                        print ('>', l1_day_meal['name'])
-
-                        ds.countdown(0, show=False)
-
-                        print(f"{'-':<5}{'Actuellement pour ':<20}{l1_day_meal['portions']:<5}{'pax'}")
-
-                        while e_portion not in ["next", "stop"]:
-                            e_portion = input(f"{'-':<5}{'Pour combien de pax ? (sinon <stop> ou <next>)'}")
-
-                            print('\n')
-
-                            if not e_portion.isdigit():
-                                if e_portion not in ["next", "stop"]:
-                                    print('Entre un nombre')
-                                    continue
-                                elif e_portion == "next":
-                                    print('Next')
-                                    break
-                                elif e_portion == "stop":
-                                    break
-
-                            for l2_ingredient in l1_day_meal['ingredients'].values():
-
-                                if l2_ingredient['quantity'] != 0:
-
-                                    try:
-                                        l2_ingredient['quantity'] = (l2_ingredient['quantity'] / l1_day_meal['portions'] ) * float(e_portion)
-                                    except ZeroDivisionError:
-                                        l2_ingredient['quantity'] = l2_ingredient['quantity'] * float(e_portion)
-
-                            l1_plural=''
-                            if int(e_portion) > 1:l1_plural = 's'
-
-                            print(f"{'-':<5}{'On passe de '}{l1_day_meal['portions']}{' à '}{e_portion}{' portion'}{l1_plural}" )
-                            l1_day_meal['portions'] = int(e_portion)
-
-                            e_portion = input(f"{'-':<5}{'Valider ? (presse <Entrée> sinon <non>)'}")
-
-                            if e_portion == "non":
-                                continue
-                            else:
-                                break
-                    else:
-                        break
-            else:
-                print('Fin de la procédure')
-                break
     
+    def showMealsByDay(self, p_asked_day=0):
+        e_text_to_return = '\n'
+        e_text_to_return += '\n'
+        e_text_to_return += self.OPTIONS[1] + ' :\n'
+        e_text_to_return += '\n'
+        e_text_to_return += ds.separator(5)
+        e_text_to_return += self.WEEK_DAYS[p_asked_day]
+        for l0_day_meal in self.temp_recettes[str(p_asked_day)].values():
+            e_text_to_return += '\n'
+            e_text_to_return += '\n'
+            e_text_to_return += '>' + l0_day_meal['name']
+            if int(l0_day_meal['portions']) and l0_day_meal['portions'] > 0:
+                e_text_to_return += f"\n{'-':<5}{'pour':<10}{l0_day_meal['portions']:<5}{'pax'}"
+
+            if int(l0_day_meal['preparation_time']) and l0_day_meal['preparation_time'] > 0:
+                e_text_to_return += f"\n{'-':<5}{'compte':<10}{l0_day_meal['preparation_time']:<5}{'min de prépa'}"
+
+            if int(l0_day_meal['cooking_time']) and l0_day_meal['cooking_time'] > 0:
+                e_text_to_return += f"\n{'-':<5}{'et':<10}{l0_day_meal['cooking_time']:<5}{'min de cuisson'}"
+
+        print(e_text_to_return)
+        return e_text_to_return 
     
     def showIngredients(self):
         e_text_to_return = self.OPTIONS[3] + ' :\n'
@@ -459,18 +416,11 @@ class Scrap:
 # In[ ]:
 
 
-joana = Scrap()
-try:
-    joana.initAppScrapping()
-except:
-    print(">> Scrap init error")
-else:
-    print('>> Loading recettes file and init portions...')
-    joana.initRecettesDatas()
-    print('Init ok')
 
 
-joana.showMeals()
-#joana.showIngredients()
-#joana.printIngredientsInFile()
+
+# In[ ]:
+
+
+
 

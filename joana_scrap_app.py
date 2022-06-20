@@ -4,18 +4,17 @@
 # In[ ]:
 
 
-#!/usr/bin/env python
-# coding: utf-8
-
 # # SCRAPPING JOANA&VOUS 
-import joana_scrap_class
 import lib_display as ds
+import joana_scrap_class
 import sys
+import lorem
 # Import view func tkinter 
 import tkinter as tkt
-import webbrowser
 
 joana = joana_scrap_class.Scrap()
+
+joana.initAppScrapping()
 
 try:
     joana.initAppScrapping()
@@ -32,176 +31,264 @@ else:
 #joana.updatePortions()
 #joana.printIngredientsInFile()
 
-
-# In[ ]:
-
-
 # APP VIEW
-
-shop_url = 'https://www.intermarche.com/accueil'
-bg_clr = '#41B77F'
-txt_clr = 'white'
-gtry = '1080x720'
-min_size_L = 480
-min_size_H = 360
-logo_ico = 'logo.ico'
-border = 1
-   
-# hide a frame
-def hideFrame():
-    frame_content.pack_forget()
+class UseDatasInView(tkt.Tk):
     
-# show the liste of meals in the menu of the week
-def viewMenu():
-    text = joana.showMeals()
-    text_to_show.set(text)
-
-# change portions of meals
-def changePortions():
-    #joana.updatePortions()
-    frame_buttons.pack_forget()
-    frame_content.pack_forget()
-    frame_change.pack(expand=1)
-    app_to_show.set('Change your portions')
+    def __init__(self):
+        self.LOREM = lorem.get_word(count=100)
         
-# show the list of all necessary ingredients
-def viewIngredients():
-    frame_buttons.pack_forget()
-    text = joana.showIngredients()
-    text_to_show.set(text)
-    frame_buttons.pack(expand=1)
+        tkt.Tk.__init__(self)    
+        self.BG_CLR = 'white'
+        self.BG_CLR_1 = "#41B77F"
+        self.BG_CLR_2 = "#f2f2f2"
+        self.TXT_CLR = 'white'
+        self.GTRY = '1080x'+str(self.winfo_screenheight())
+        self.MIN_WIDTH = 720
+        self.MIN_HEIGHT = 720
+        self.WIDTH_BTN = 20
+        self.IPADY_CONTENT = 20
+        self.WIDTH_CONTENT_AREA=self.MIN_WIDTH
+        self.LOGO_ICO = 'logo.ico'
+        self.BORDER = 1
+        
+        #Create the main window
+        self.title("Titre fenêtre")
+        self.geometry(self.GTRY)
+        #self.iconbitmap("img/icon_checked.ico")
+        self.minsize(self.MIN_WIDTH, self.MIN_HEIGHT)
+        self.config(background=self.BG_CLR)
+        self.resizable(width=True, height=True)
+        #self.attributes('-fullscreen', True) 
+        
+        self.frame_buttons = tkt.Frame(self, bg=self.BG_CLR_1)
+        self.btn_opt_menu = tkt.Button(self.frame_buttons, 
+                                  text="Bouton menu", 
+                                  command=self.showWeekMenu, 
+                                  width=self.WIDTH_BTN)
+        self.btn_opt_portions = tkt.Button(self.frame_buttons, 
+                                      text="Bouton portions", 
+                                      command=self.showAppPortions, 
+                                      width=self.WIDTH_BTN)
+        self.btn_opt_ingredients = tkt.Button(self.frame_buttons, 
+                                         text="Bouton ingrédients", 
+                                         command=self.showIngredientsList, 
+                                         width=self.WIDTH_BTN)
+        
+        self.btn_opt_menu = tkt.Button(self.frame_buttons, 
+                                  text="Bouton menu", 
+                                  command=self.showWeekMenu, 
+                                  width=self.WIDTH_BTN)
+        self.btn_opt_portions = tkt.Button(self.frame_buttons, 
+                                      text="Bouton portions", 
+                                      command=self.showAppPortions, 
+                                      width=self.WIDTH_BTN)
+        self.btn_opt_ingredients = tkt.Button(self.frame_buttons, 
+                                         text="Bouton ingrédients", 
+                                         command=self.showIngredientsList, 
+                                         width=self.WIDTH_BTN)
+        self.label_space = tkt.Label(self.frame_buttons, 
+                                     bg=self.BG_CLR_1, 
+                                     text='')
+        self.asked_day = 0
+        self.asked_day_in_app = 0
+        self.btn_choosing_day = {}
+        self.btn_choosing_day_in_app = {}
+        for l0_i, l0_day in enumerate(joana.WEEK_DAYS):
+            self.btn_choosing_day[l0_i] = tkt.Button(self.frame_buttons, 
+                                                     text=l0_day, 
+                                                     width=self.WIDTH_BTN,
+                                                     command=lambda day_id=l0_i : self.chooseDayToShow(p_day_id=day_id, p_current_view='menu'))
+            
+            self.btn_choosing_day_in_app[l0_i] = tkt.Button(self.frame_buttons,
+                                                            text=l0_day, 
+                                                            width=self.WIDTH_BTN,
+                                                            command=lambda day_id=l0_i : self.chooseDayToShowInApp(day_id))
+        
+        self.frame_content = tkt.Frame(self,
+                                       width=self.WIDTH_CONTENT_AREA,
+                                       bg=self.BG_CLR_2)
+        
+        self.message_to_show = tkt.StringVar()
+        #e_bourrage = self.LOREM
+        e_bourrage = ''
+        self.message_to_show.set('Bienvenue \n Tu vas pouvoir personnaliser ton menu de la semaine à partir des propositions de Joana. \n'+e_bourrage)
+        self.message_content = tkt.Message(self.frame_content, 
+                                      text="Text par défaut", 
+                                      textvariable=self.message_to_show, 
+                                      width=self.WIDTH_CONTENT_AREA, 
+                                      justify="left")
+        
+        #Define none displayed elements
+        self.btn_quit_app_portions = tkt.Button(self.frame_buttons, 
+                                           text="Bouton quitter", 
+                                           command=self.quitAppPortions, 
+                                           width=self.WIDTH_BTN)
 
-# force te API scrapping
-def forceScrap():  
-    frame_buttons.pack_forget()
-    text = joana.scrapCurrentWeek()
-    print('>>>   Semaine scrappée')
-    frame_buttons.pack(expand=1)
+        self.frame_app_portions = tkt.Frame(self.frame_content, 
+                                            bg=self.BG_CLR_2,  
+                                            width=self.WIDTH_CONTENT_AREA)
+        self.frame_by_day = {}
+        self.label_by_day = {}
+        for l0_i, l0_day in enumerate(joana.WEEK_DAYS):
+            self.frame_by_day[l0_i] = tkt.Frame(self.frame_app_portions, 
+                                       width=self.WIDTH_CONTENT_AREA)
+            self.label_by_day[l0_i] = tkt.Label(self.frame_by_day[l0_i], 
+                                       text=joana.WEEK_DAYS[l0_i],
+                                       width=self.WIDTH_CONTENT_AREA)
+            self.label_by_day[l0_i].pack(pady=2)
+            for l1_i, l1_day_meal in enumerate(joana.temp_recettes[str(l0_i)].values()):
+                e_current_btn_txt = tkt.StringVar()
+                ds.separator()
+                e_frame_slider_by_meal = tkt.Frame(self.frame_by_day[l0_i], 
+                                                   width=self.WIDTH_CONTENT_AREA)
+                e_btn_by_meal = tkt.Button(e_frame_slider_by_meal, 
+                                                       text="Valider",
+                                                       textvariable=e_current_btn_txt)
+                e_current_btn_txt.set("Valider")
+                e_scale_by_meal = tkt.Scale(e_frame_slider_by_meal, 
+                                        orient='horizontal', 
+                                        from_=0, to=3,
+                                        resolution=1, 
+                                        tickinterval=1, 
+                                        length=self.WIDTH_CONTENT_AREA/2, 
+                                        label=l1_day_meal['name'])  
+                e_scale_by_meal.set(joana.temp_recettes[str(l0_i)][str(l1_i+1)]["portions"])
+                e_btn_by_meal['command'] = lambda day_id=l0_i, meal_id=l1_i, scale=e_scale_by_meal, btn_text=e_current_btn_txt: self.updatePortion(day_id, meal_id, scale, btn_text)
+                e_frame_slider_by_meal.pack(pady=2)
+                e_scale_by_meal.pack()
+                e_btn_by_meal.pack()
 
-# export the list of all necessary ingredients
-def exportIngredients():  
-    text = joana.printIngredientsInFile()
-    print('>>>   Ingrédients ajoutés au fichier de la semaine')
-    text_to_show.set(text)
+        self.initView()
+        self.frame_buttons.pack(side="left", fill='y', padx= 30, ipadx=10, ipady=20)
+        self.showNavButtons()
+        self.showContent()
+        self.showContentMessage()
 
-# open the shop webpage
-def openShop(url=shop_url):
-    webbrowser.open_new(url)
+    
+    def initView(self):
+        # Create the app window
+        self.frame_title = tkt.Frame(self, 
+                                bg="blue", 
+                                width=self.MIN_WIDTH, 
+                                height=self.MIN_HEIGHT)
+        self.label_title = tkt.Label(self.frame_title, 
+                                text='Menu de la semaine', 
+                                bg=self.BG_CLR_1, 
+                                fg=self.TXT_CLR)
+        self.label_subtitle = tkt.Label(self.frame_title, 
+                                   text='Hello Judith', 
+                                   bg=self.BG_CLR_1, 
+                                   fg=self.TXT_CLR)
+        self.frame_title.pack(fill='x')
+        self.label_title.pack(fill='x')
+        self.label_subtitle.pack(fill='x')
+        self.showPortionsScalesByDay(p_asked_day=0)
+        
+        
+    def chooseDayToShowInApp(self, p_day_id):
+        self.hidePortionsScalesByDay()
+        self.asked_day_in_app = p_day_id
+        self.showPortionsScalesByDay(p_asked_day=self.asked_day_in_app)
+    
+    def chooseDayToShow(self, p_day_id, p_current_view='menu'):
+        self.asked_day = p_day_id
+        if p_current_view == 'menu':
+            e_text = joana.showMealsByDay(p_asked_day=self.asked_day)
+            self.message_to_show.set(e_text)
+    
+    def showEmptySpace(self):
+        self.label_space.pack(fill='x', pady=2)
+    
+    def hideEmptySpace(self):
+        self.label_space.pack_forget()
+        
+    def showNavButtons(self):
+        self.btn_opt_menu.pack(fill='x', pady=2)
+        self.btn_opt_portions.pack(fill='x', pady=2)
+        self.btn_opt_ingredients.pack(fill='x', pady=2)
+        
+    def hideNavButtons(self):
+        self.btn_opt_menu.pack_forget()
+        self.btn_opt_portions.pack_forget()
+        self.btn_opt_ingredients.pack_forget()
+    
+    def showDaysButtons(self):
+        self.showEmptySpace()
+        for l0_i in range(len(joana.WEEK_DAYS)):
+            self.btn_choosing_day[l0_i].pack(fill='x', pady=2)
+    
+    def hideDaysButtons(self):
+        self.hideEmptySpace()
+        for l0_i in range(len(joana.WEEK_DAYS)):
+            self.btn_choosing_day[l0_i].pack_forget()
 
-# Create the window
-window = tkt.Tk()
+    def showDaysButtonsInApp(self):
+        self.showEmptySpace()
+        for l0_i in range(len(joana.WEEK_DAYS)):
+            self.btn_choosing_day_in_app[l0_i].pack(fill='x', pady=2)
+    
+    def hideDaysButtonsInApp(self):
+        self.hideEmptySpace()
+        for l0_i in range(len(joana.WEEK_DAYS)):
+            self.btn_choosing_day_in_app[l0_i].pack_forget()
 
-# open the shop webpage
-def stopApp(w=window):
-    window.destroy
-    sys.exit(0)
-# def text():
-#     frame_buttons.delete(0, END)
-#     frame_buttons.insert(0, 'Hello world')
+    def showContent(self):
+        self.frame_content.pack(side='left', fill='both')
 
-# Create the navigation bar
-nav_bar = tkt.Menu(window)
-opt_nav=tkt.Menu(nav_bar, tearoff=0)
-opt_nav.add_command(label='Scrap /!\\', command=forceScrap)
-opt_nav.add_command(label='Imprimer', command=viewIngredients)
-opt_nav.add_command(label='Quitter', command=stopApp)
-nav_bar.add_cascade(label="Options", menu=opt_nav)
+    def showContentMessage(self):
+        self.message_content.pack(fill='both', ipady=10, ipadx=50)
+        
+    def hideContentMessage(self):
+        self.message_content.pack_forget()
+    
+    def showWeekMenu(self):
+        self.showDaysButtons()
+        e_text = joana.showMealsByDay(self.asked_day_in_app)
+        self.message_to_show.set(e_text)
 
-# Configure the window
-window.title("Je t'aime mon âme d'am°°°")
-window.geometry(gtry)
-window.minsize(min_size_L, min_size_H)
-#window.iconbitmap("logo.ico")
-window.config(menu=nav_bar, background=bg_clr, bd=1, relief='sunken')
-
-scrollbar = tkt.Scrollbar(window)
-
-
-# Create the frames
-frame_title = tkt.Frame(window, bd=border,bg=bg_clr)
-frame_buttons = tkt.Frame(window, bd=border, bg=bg_clr)
-frame_change = tkt.Frame(window, bd=border, bg=bg_clr)
-frame_content = tkt.Canvas(window, yscrollcommand=scrollbar.set, bd=border, bg=bg_clr)
-
-scrollbar.pack(side='right', fill='y')
-scrollbar.config(command=frame_content.yview )
-
-
-# Add texts
-label_title = tkt.Label(frame_title, text='Menu de la semaine', font=("Arial", 30), bd=border, bg=bg_clr, fg=txt_clr)
-label_subtitle = tkt.Label(frame_title, text='Hello Judith', font=("Arial", 20), bd=border, bg=bg_clr, fg=txt_clr)
-label_change = tkt.Label(frame_change, text='Change', font=("Arial", 20), bd=border, bg=bg_clr, fg=txt_clr)
-
-text_to_show = tkt.StringVar()
-text_to_show.set('Affichage')
-
-app_to_show = tkt.StringVar()
-app_to_show.set('My changing app')
-
-label_changing = tkt.Label(frame_change, textvariable=app_to_show, font=("Arial", 20), bd=border, bg=bg_clr, fg=txt_clr)
-label_content = tkt.Label(frame_content, textvariable=text_to_show, font=("Arial", 20), bd=border, bg=bg_clr, fg=txt_clr)
-
-# Add buttons
-menu_button = tkt.Button(frame_buttons, 
-                        text=joana.OPTIONS[1], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
-                        command=viewMenu)
-change_button = tkt.Button(frame_buttons, 
-                        text=joana.OPTIONS[2], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
-                        command=changePortions)
-ingredients_button = tkt.Button(frame_buttons, 
-                        text=joana.OPTIONS[3], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
-                        command=viewIngredients)
-export_button = tkt.Button(frame_buttons, 
-                        text=joana.OPTIONS[4], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
-                        command=exportIngredients)
-shop_button = tkt.Button(frame_buttons, 
-                        text=joana.OPTIONS[5], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
-                        command=openShop)
-quit_button = tkt.Button(frame_buttons, 
-                        text=joana.OPTIONS[6], font=("Arial", 20), relief='groove', bd=border, bg=bg_clr, fg=txt_clr, 
-                        command=window.destroy)
-
-# Add pictures
-'''
-width = 300
-height = 300
-image = photoImage(file='profil.png').zoom(35).subsample(32)
-canvas = Canvas(window, width=width, height=height, bg=bg_clr, bd=0, highlighttickness = 0)
-canvas.create_image(width/2, height/2, image=image)
-'''
-# Show content
-#label_title.pack(side=LEFT)
-label_title.pack(expand='yes')
-label_subtitle.pack(expand='yes')
-
-frame_title.pack(expand='yes')
-
-# Show button
-menu_button.grid(row=0, column=0, pady=10)
-change_button.grid(row=0, column=1, pady=10)
-ingredients_button.grid(row=1, column=0, pady=10)
-export_button.grid(row=1, column=1, pady=10)
-shop_button.grid(row=2, columnspan=2, pady=10)
-quit_button.grid(row=3, columnspan=2, pady=10)
-
-frame_buttons.pack(expand=1)
-
-# Show canvas
-label_changing.pack(expand='yes')
-
-label_content.pack(expand='yes')
-frame_content.pack(expand=1)
-#canvas.pack(expand=YES)
-
-
-# Show the app
-window.mainloop()
+    # App to change portions of meals
+    def showAppPortions(self):
+        self.hideDaysButtons()
+        self.hideNavButtons()
+        self.hideContentMessage()
+        self.btn_quit_app_portions.pack(fill='x', pady=2) 
+        self.showDaysButtonsInApp()
+        self.frame_app_portions.pack(side='left', fill='y', ipady=10, ipadx=50)
+        
+    def showIngredientsList(self):
+        self.hideDaysButtons()
+        e_text = joana.showIngredients()
+        self.message_to_show.set(e_text)
+    
+    def showPortionsScalesByDay(self, p_asked_day):
+        self.frame_by_day[p_asked_day].pack(pady=2)
+        
+    def hidePortionsScalesByDay(self):
+        self.frame_by_day[self.asked_day_in_app].pack_forget()
+            
+    def updatePortion(self, p_day_id, p_meal_id, p_meal_scale, p_btn_txt):    
+        p_meal_id = p_meal_id+1
+        joana.temp_recettes[str(p_day_id)][str(p_meal_id)]['portions'] = p_meal_scale.get() 
+        e_new_text_btn = "Jude, c'est ok pour " + str(p_meal_scale.get())
+        p_btn_txt.set(e_new_text_btn)
+    
+    def quitAppPortions(self):
+        self.frame_app_portions.pack_forget()
+        self.btn_quit_app_portions.pack_forget()
+        self.showNavButtons()
+        self.hideDaysButtonsInApp()
+        self.showContentMessage()
 
 
 # In[ ]:
 
 
-
+if __name__== "__main__":
+        #Create the application in a Tkinter window
+        app = UseDatasInView()
+        #Events manager
+        app.mainloop()
+        
 
 
 # In[ ]:

@@ -27,7 +27,7 @@ def countdown(p_laps, p_show=True, p_step=1, p_space=2):
         printn(p_space)
         print('Waiting...', e_global_time, 's ...', end=' ')
     if p_laps!= 0: time.sleep(1)
-    for l_i in range(l_global_time)[1:]:
+    for l_i in range(e_global_time)[1:]:
         if p_show and l_i%p_step == 0:
             print(p_laps*p_step-i, '...', end=' ')
         time.sleep(1)
