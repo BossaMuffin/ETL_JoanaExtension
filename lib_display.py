@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 # # Bossa Muffin Functions Display Library v1 - 24/04/2022 
 # # to import in all my program
 import time
@@ -10,7 +9,6 @@ def printn(p_nb=1):
     for l_i in range(p_nb):
         print('\n')
 
-
 # Function which displays full line in the consol 
 def printl(p_nb=10):
      print('-'*p_nb)
@@ -18,7 +16,6 @@ def printl(p_nb=10):
 # Function which returns full line
 def separator(p_nb=10):
      return '-'*p_nb
-
 
 # Function which delays the program by x laps of y steps (defaut 1)
 def countdown(p_laps, p_show=True, p_step=1, p_space=2):
