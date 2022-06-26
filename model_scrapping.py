@@ -104,10 +104,12 @@ class ModelScrapping:
     def _initPortionsToOne(self):
         for l0_i, l0_day_meals in enumerate(self.g_temp_recettes.values()):  
             for l1_i, l1_day_meal in enumerate(l0_day_meals.values()):
-                l1_day_meal['portions'] = 1
+                # divide all ingredient quantity by portions to have quantity for 1 person
                 for l2_i, l2_ingredient in enumerate(l1_day_meal['ingredients'].values()):
-                    if l2_ingredient['quantity'] != 0:
+                    if l1_day_meal['portions'] != 0:
                         l2_ingredient['quantity'] = l2_ingredient['quantity'] / l1_day_meal['portions']
+                # set portion to 1
+                l1_day_meal['portions'] = 1
     
     def _getSessionHeader():
         e_header = {
@@ -239,8 +241,6 @@ class ModelScrapping:
                         ds.countdown(l3_temp_time, p_step=1, p_show=False, p_space=0)
                         e_text_to_return = e_text_to_return + '    > "' + e_recettes[l0_i][l0_k]['ingredients'][l3_j]['name'] + '"'
                         print(e_recettes[l0_i][l0_k]['ingredients'][l3_j]['name'])
-                        #g_text_to_show.set(e_text_to_return)
-                        #g_label_content.update()
         e_json_object = json.dumps(e_recettes, indent = 4)
         with open(self.constructFilesPath()['week'], "w") as l_outfile:
             l_outfile.write(e_json_object)
