@@ -5,36 +5,24 @@ Created on June 18, 2022
 '''
 # secret logins to connect with the foreign apps (Joana's API, personnal mail server...)
 import config
+# constants available in the whole app
+import global_constants as g_const
 # # #
 import lib_display as ds
 from fake_useragent import UserAgent 
-import requests, json
-import random
+import sys, requests, json, random
 # to send an email
 import smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import sys
 
 class ModelScrapping:
     '''
     Classdocs
     '''
     def __init__(self):
-        self.URL_LOGIN = 'https://api.joanaetvous.com/auth/jwt/create/'
-        self.URL_API = 'https://api.joanaetvous.com/'
-        self.URL_APP = 'https://app.joanaetvous.com/'
         self.LOGIN_MAIL = config.EMAIL
         self.LOGIN_PWD = config.PASSWORD
-        self.WEEK_DAYS = [
-            'lundi', 
-            'mardi', 
-            'mercredi', 
-            'jeudi', 
-            'vendredi', 
-            'samedi',
-            'dimanche',
-        ]
         self.SMTP_ADDRESS = config.SMTP_ADDRESS
         self.SMTP_PORT = config.SMTP_PORT
         self.SMTP_LOGIN_MAIL = config.SMTP_EMAIL
@@ -63,22 +51,33 @@ class ModelScrapping:
         self.week_date_deb = "default"
         self.header = {}
         self.current_session = {}
-        self.week_pdf = ""
+        self.week_png = ""
         self.days_uuid = []
         self.g_temp_recettes = {}
+    
+    def start(self):
+        e_results_to_return = {}
+        e_results_to_return['text'] = ""
+        e_results_to_return['bool'] = False
         try:
             self._initAppScrapping()
         except:
-            print(">> Scrap init error")
+            e_results_to_return['text'] += ">> Erreur de scrapping"
+            e_results_to_return['text'] += "\n"     
+            e_results_to_return['text'] += ">> Vérifie la connexion à internet"
+            e_results_to_return['text'] += "\n"
         else:
-            print(">> Loading recettes file and initializing portions...")
+            e_results_to_return['text'] += ">> Chargement des recettes..."
+            e_results_to_return['text'] += "\n"
             self._initRecettesDatas()
-            print(">> Loading completed")
-    
-    def main(self):
-        pass
+            e_results_to_return['text'] += ">> Chargement terminé"
+            e_results_to_return['text'] += "\n"
+            e_results_to_return['bool'] = True
+        finally:
+            return e_results_to_return
     
     def _initAppScrapping(self):
+        e_text_to_return = ""
         # test if the joana's week have been scrapped yet
         self._getSessionHeader
         with self._login() as e_current_session :
@@ -87,14 +86,25 @@ class ModelScrapping:
             ds.printn()
             if self._isWeekFile():
                 print(">> Week scrapped yet")
+                e_text_to_return += ">> La semaine a déjà été récupéré chez Joana"
+                e_text_to_return += "\n"
             else:
                 print(">> Week to be scrapped")
+                e_text_to_return += ">> La semaine va être récupérée chez Joana"
+                e_text_to_return += "\n"
                 print(">> Scrapping process ...")
+                e_text_to_return += ">> Démarrage du processus"
+                e_text_to_return += "\n"
                 self.scrapCurrentWeek()
                 print(">> Scrapping done")
+                e_text_to_return += ">> Processus terminé"
+                e_text_to_return += "\n"
                 print(">> Sending a notif email ...")
+                e_text_to_return += ">> Envoie d'un mail de notification"
+                e_text_to_return += "\n"
                 self._mailNotif()
             self.files_path = self.constructFilesPath()
+        return e_text_to_return
 
     def _initRecettesDatas(self):
         with open(self.constructFilesPath()['week'], "r") as l_infile:
@@ -147,7 +157,7 @@ class ModelScrapping:
             'email' : self.LOGIN_MAIL,
             'password' : self.LOGIN_PWD
         }
-        with e_session.post(self.URL_LOGIN, json = e_payload, headers=self.header) as l_post:
+        with e_session.post(g_const.URL_LOGIN, json = e_payload, headers=self.header) as l_post:
             e_session.headers.update({'authorization': 'Bearer '+ json.loads(l_post.content)['access']})
         self.current_session = e_session
         return e_session
@@ -156,19 +166,19 @@ class ModelScrapping:
         print("\n")
         print("JOANA - SESSION CONNEXION")
         print("Login   : ", self.LOGIN_MAIL)
-        print("@       : ", self.URL_API)
+        print("@       : ", g_const.URL_API)
         print("Headers : ", self.current_session.headers)
 
     def _getJoanaSessionMetas(self):
         e_menu_semaine = self._getJsonAnswer('meal-plan/')
         self.week_date_deb = e_menu_semaine['beginning_date'].split(':', 1)[0]
-        self.week_pdf = e_menu_semaine['pdf']
+        self.week_png = e_menu_semaine['pdf']
         self.days_uuid = [l_day['uuid'] for l_day in e_menu_semaine['weekdays']]
 
     # Get json answer from Joana API
     def _getJsonAnswer(self, p_target, p_uuid=''):
         e_json_datas = ''
-        with self.current_session.get(self.URL_API+p_target+p_uuid, headers=self.header) as l_datas:
+        with self.current_session.get(g_const.URL_API+p_target+p_uuid, headers=self.header) as l_datas:
             e_json_datas = l_datas.json()
         return e_json_datas
 
@@ -183,12 +193,13 @@ class ModelScrapping:
         e_files_path =  {}
         e_files_path['week'] = self.WEEK_FILE_PREFIXE + self.week_date_deb + ".json"
         e_files_path['ingredients'] = self.WEEK_FILE_PREFIXE + 'ingredients_' + self.week_date_deb + ".txt"
+        e_files_path['menu'] = self.WEEK_FILE_PREFIXE + 'menu_' + self.week_date_deb + ".png"
         return e_files_path 
     
     def scrapCurrentWeek(self):
         e_text_to_return = '\n'
         e_week_datas = {}
-        e_week_datas = e_week_datas.fromkeys(self.WEEK_DAYS, "np_matrix")
+        e_week_datas = e_week_datas.fromkeys(g_const.WEEK_DAYS, "np_matrix")
         e_recettes= {}
         e_json_object = {}
         e_week_files_path = {}
@@ -199,7 +210,7 @@ class ModelScrapping:
         print("\n\n###",  self.week_date_deb, "###\n\n" )
         
         e_recette_uuid = ''
-        for l0_i, l0_day in enumerate(self.WEEK_DAYS):
+        for l0_i, l0_day in enumerate(g_const.WEEK_DAYS):
             e_text_to_return = e_text_to_return + "\n\n\n------------\n" + l0_day + "\n------------"
             print("\n\n\n------------\n", l0_day, "\n------------")
             e_recettes[l0_i] = {}

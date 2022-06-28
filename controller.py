@@ -3,12 +3,19 @@ Created on June 18, 2022
 @author: BalthMhs
 @society: BossaMuffinConnected
 '''
-import lib_display as ds
-ds.printn()
+# constants available in the whole app
+import global_constants as g_const
+# MVC 
 from model import Model
 from view import TkView
+# # #
+import lib_display as ds
+ds.printn()
 from datetime import datetime
-from time import strftime
+from time import strftime, sleep
+import sys
+
+
 
 class Controller:
     '''
@@ -21,12 +28,16 @@ class Controller:
 
     def start(self):
         print(">> Joana's patch is begining")
-        print(">> Start the model")
-        self.model.main()
-        print(">> Setup the view")
-        self.view.setup(self)
+        print(">> Setup the window")
+        self.view.setupWindow(self)
+        print(">> Setup the first view")
+        self.view.setupMainView(self)
         print(">> Start to loop")
         self.view.startMainLoop()
+    
+    def stopApp(self):
+        self.view.destroy
+        sys.exit(0)
     
     def getDictRecettes(self):
         return self.model.getDictRecettes()
@@ -46,9 +57,31 @@ class Controller:
     def _updateAskedDayInPortionsApp(self, p_int_day):
         self.model.g_asked_day_in_app = p_int_day
     
+    def setRecettesDatas(self):
+        print(">> Start the model")
+        self.view.var_message_to_show.set("... Attendons quelques secondes ...")
+        self.view.update()
+        e_results = self.model.start()
+        self.view.var_message_to_show.set(e_results['text'])
+        if e_results['bool']:
+            self.view.addScrapBtnToNavBar()
+            self.view.hideStartButton()
+            self.view.makeDaysFrames()
+            self.view.showNavButtons()
+            self.view.var_message_to_show.set(self.view.CONTENT_MESSAGE[1])
+        else:
+            self.view.var_start_btn_txt.set("Réessayer")
+        
+    
     def showWeekMenu(self):
         self.view.showDaysButtons()
         e_text_result = self.model.showMealsByDay()
+        self.view.var_message_to_show.set(e_text_result)
+    
+    def downloadJoanaPngMenu(self):
+        self.view.var_message_to_show.set("Téléchargement en cours ...")
+        self.view.update()
+        e_text_result = self.model.downloadJoanaPngMenu()
         self.view.var_message_to_show.set(e_text_result)
     
     # App to change portions of meals
@@ -69,11 +102,14 @@ class Controller:
     def exportIngredientsInFile(self):
         e_horaire = str(datetime.now())
         self.model.exportIngredientsInFile(e_horaire)
-        e_text_result = f'Fichier bien enregistré : {self.model.getFilesPath("ingredients")} \n à {e_horaire} '
+        e_text_result = f'Fichier bien enregistré :\n {self.model.getFilesPath("ingredients")} \n à {e_horaire} '
         self.view.var_message_to_show.set(e_text_result)
-        
-    def getListWeekDays(self):
-        return self.model.getListWeekDays()
+    
+    def forceScrapping(self):
+        self.view.var_message_to_show.set("...\nSoyons patients, car cela prendra environ 5 minutes. \nTu seras prévenue à la fin.\n...")
+        self.view.update()
+        e_text_result = self.model.forceScrapping()
+        self.view.var_message_to_show.set(e_text_result)
             
     def chooseDayToShow(self, p_day_id, p_current_view='menu'):
         print(self.model.g_asked_day)
@@ -101,7 +137,7 @@ class Controller:
         self.model.update1Portion(p_day_id, p_meal_id, p_meal_scale.get())
         e_new_text_btn = "Jude, c'est ok pour " + str(p_meal_scale.get())
         p_var_btn_txt.set(e_new_text_btn)
-        print(e_temp_recettes[str(p_day_id)][str(p_meal_id)]['name'], ' to ', str(p_meal_scale.get()))
+        print(">> ", e_temp_recettes[str(p_day_id)][str(p_meal_id)]['name'], " to ", str(p_meal_scale.get()))
 
         
 if __name__== "__main__":

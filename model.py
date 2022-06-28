@@ -3,12 +3,15 @@ Created on June 18, 2022
 @author: BalthMhs
 @society: BossaMuffinConnected
 '''
+# constants available in the whole app
+import global_constants as g_const
+# dependency
 from model_scrapping import ModelScrapping
+# # #
 import lib_display as ds
 import pandas as pd
-import copy
-import sys
-import os
+import copy, sys, os
+import urllib.request
 
 class Model:
     '''
@@ -17,23 +20,14 @@ class Model:
     
     def __init__(self):
         self.scrap = ModelScrapping()
-        self.g_WEEK_DAYS = self.getListWeekDays()
-        # Les choix proposés au menu du programme sont compris entre l'indice 1 et l'avant-dernier (réservés au titre et à la question)
-        self.OPTIONS = [
-            "Choix possibles :",
-            "Afficher la liste des recettes de la semaine",
-            "Modifier les portions par recette",
-            "Afficher les ingredients",
-            "Exporter la liste d'ingrédients",
-            "Shop on drive",
-            "Quitter",
-            "Quelle action choisis-tu ?",  
-        ] 
+        # Les choix proposés au menu du programme sont compris entre l'indice 1 et l'avant-dernier (réservés au titre et à la question) 
         self.g_asked_day = 0
         self.g_asked_day_in_app = 0
 
-    def main(self):
-        pass   
+    def start(self):
+        e_results_to_return = self.scrap.start()
+        print(e_results_to_return['text'])
+        return e_results_to_return
     
     def getDictRecettes(self):
         return self.scrap.g_temp_recettes
@@ -52,17 +46,37 @@ class Model:
         file_path_to_return = self.scrap.constructFilesPath()[p_file_type]
         return file_path_to_return
     
+    def downloadJoanaPngMenu(self):
+        e_text_to_return = g_const.OPTIONS['download_menu']
+        e_png_url = g_const.URL_API[:-1]+self.scrap.week_png
+        e_file_path = self.getFilesPath('menu')
+        print(">> Download is starting")
+        try:
+            urllib.request.urlretrieve(e_png_url, e_file_path)
+            self._openFileInNewWindow(e_file_path)
+        except:
+            e_text_to_return = "Erreur de téléchargement"
+            print(">> Download error")
+        else:
+            e_text_to_return = f'Cible : {g_const.URL_API[:-1]}\n Document : {self.scrap.week_png}\n Téléchargé dans : {e_file_path}'
+            print(">> Download ok")
+        finally :
+            return e_text_to_return
+    
+    def forceScrapping(self):
+        e_text_to_return = self.scrap.scrapCurrentWeek()
+        return e_text_to_return
+    
     def showMealsByDay(self):
         e_temp_recettes = self.getDictRecettes()
-        e_text_to_return = '\n'
-        e_text_to_return += '\n'
-        e_text_to_return += self.OPTIONS[1] + ' :\n'
-        e_text_to_return += '\n'
-        e_text_to_return += '>> '
-        e_text_to_return += self.g_WEEK_DAYS[self.g_asked_day]
+        e_text_to_return = ""
+        e_text_to_return += g_const.OPTIONS['show_menu'] + " :\n"
+        e_text_to_return += "\n"
+        e_text_to_return += ">> "
+        e_text_to_return += g_const.WEEK_DAYS[self.g_asked_day]
         for l0_day_meal in e_temp_recettes[str(self.g_asked_day)].values():
-            e_text_to_return += '\n'
-            e_text_to_return += '\n'
+            e_text_to_return += "\n"
+            e_text_to_return += "\n"
             e_text_to_return += ds.separator(5) + l0_day_meal['name']
             if int(l0_day_meal['portions']) and l0_day_meal['portions'] > 0:
                 e_text_to_return += f"\n{'-':<5}{'pour':<10}{l0_day_meal['portions']:<5}{'pax'}"
@@ -77,10 +91,10 @@ class Model:
         return e_text_to_return 
     
     def showIngredients(self):
-        e_text_to_return = self.OPTIONS[3] + ' :\n'
+        e_text_to_return = g_const.OPTIONS['list_ingredients'] + " :\n"
         for l0_i, l0_ingredient_group in self._orderIngredientsInDf().items():
             l1_line = f"{'>':<5}{l0_ingredient_group}"
-            e_text_to_return = e_text_to_return + '\n' + l1_line
+            e_text_to_return = e_text_to_return + "\n" + l1_line
         print(e_text_to_return)
         return e_text_to_return
 
@@ -120,36 +134,10 @@ class Model:
                         e_nb_lines += 1
         e_df_ingredients_sorted = e_df_ingredients.groupby(['Category', 'Name', 'Symbol']).sum()
         return e_df_ingredients_sorted
-    
-    def showMeals(self):
-        e_text_to_return = self.OPTIONS[1] + ' :\n'
-        l0_day_i = 0
-        for l0_day_meals in self.temp_recettes.values():  
-            e_text_to_return += '\n'
-            e_text_to_return += '\n'
-            e_text_to_return += '\n'
-            e_text_to_return += ds.separator(5)
-            e_text_to_return += self.WEEK_DAYS[l0_day_i]
-            l0_day_i += 1
-            for l1_day_meal in l0_day_meals.values():
-                e_text_to_return += '\n'
-                e_text_to_return += '\n'
-                e_text_to_return += '>' + l1_day_meal['name']
-                if int(l1_day_meal['portions']) and l1_day_meal['portions'] > 0:
-                    e_text_to_return += f"\n{'-':<5}{'pour':<10}{l1_day_meal['portions']:<5}{'pax'}"
-
-                if int(l1_day_meal['preparation_time']) and l1_day_meal['preparation_time'] > 0:
-                    e_text_to_return += f"\n{'-':<5}{'compte':<10}{l1_day_meal['preparation_time']:<5}{'min de prépa'}"
-
-                if int(l1_day_meal['cooking_time']) and l1_day_meal['cooking_time'] > 0:
-                    e_text_to_return += f"\n{'-':<5}{'et':<10}{l1_day_meal['cooking_time']:<5}{'min de cuisson'}"
-        
-        #print(e_text_to_return)
-        return e_text_to_return
 
     def exportIngredientsInFile(self, p_gdh):
         e_file_path = self.getFilesPath('ingredients')
-        e_text_to_return = self.OPTIONS[4] + ' :\n'                                    
+        e_text_to_return = g_const.OPTIONS['export_ingredients'] + " :\n"                                    
         e_nb_lines = 0
         with open(e_file_path, "w") as l0_outfile:
             l0_outfile.write("LISTE DES INGREDIENTS DE LA SEMAINE \n\n-----------------\n")
@@ -157,15 +145,16 @@ class Model:
             
             for l1_i, l1_ingredient_group in self._orderIngredientsInDf().items():
                 l1_line = f"{'+':<5}{l1_ingredient_group}"
-                e_text_to_return = e_text_to_return + '\n' + l1_line
-                l0_outfile.write(l1_line + '\n')
+                e_text_to_return = e_text_to_return + "\n" + l1_line
+                l0_outfile.write(l1_line + "\n")
                 e_nb_lines += 1
-        self._openFileInTextEditor(e_file_path)
+        self._openFileInNewWindow(e_file_path)
         e_text_to_return += str(e_nb_lines)
         return e_text_to_return
     
-    def _openFileInTextEditor(self, p_file_path):
+    def _openFileInNewWindow(self, p_file_path):
         if "win" in sys.platform:
             os.startfile(p_file_path)
         else:
             os.system('xdg-open ' + p_file_path)
+            
