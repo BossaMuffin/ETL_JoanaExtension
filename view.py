@@ -79,10 +79,13 @@ class TkView(tk.Tk):
                                 text="MENU DE LA SEMAINE", 
                                 bg=self.BG_CLR_1, 
                                 fg=self.TXT_CLR)
+        self.var_subtitle_to_show = tk.StringVar()
+        self.var_subtitle_to_show.set("Hello my Jude'")
         self.label_subtitle = tk.Label(self.frame_title, 
-                                   text="Hello my Jude'", 
-                                   bg=self.BG_CLR_1, 
-                                   fg=self.TXT_CLR)
+                                    text="Hello my Jude'", 
+                                    textvariable=self.var_subtitle_to_show,
+                                    bg=self.BG_CLR_1, 
+                                    fg=self.TXT_CLR)
         self.frame_title.pack(fill='x')
         self.label_title.pack(fill='x')
         self.label_subtitle.pack(fill='x')

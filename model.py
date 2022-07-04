@@ -9,6 +9,7 @@ import global_constants as g_const
 from model_scrapping import ModelScrapping
 # # #
 import lib_display as ds
+from datetime import date, timedelta
 import pandas as pd
 import copy, sys, os
 import urllib.request
@@ -32,6 +33,31 @@ class Model:
     def getDictRecettes(self):
         return self.scrap.g_temp_recettes
     
+    def _getDateBeginingWeek(self):
+        return self.scrap.g_date_begining_week
+    
+    def _formatDateBeginingWeek(self, p_date_to_format : _getDateBeginingWeek):
+        e_date = p_date_to_format.split('T', 1)
+        e_datetime_to_return = date.fromisoformat(e_date[0])
+        e_datetime_to_return += timedelta(days=1)
+        return e_datetime_to_return
+    
+    def _formatDateEndWeek(self, p_datetime_beginning_week : _formatDateBeginingWeek):
+        e_datetime_end_week_to_return = p_datetime_beginning_week + timedelta(days=6)
+        return e_datetime_end_week_to_return
+    
+    def formatDatesToShowInStr(self):
+        e_begin_date = self._getDateBeginingWeek()
+        e_begin_date = self._formatDateBeginingWeek(e_begin_date)
+        e_begin_day = g_const.WEEK_DAYS[e_begin_date.weekday()]
+        e_end_date = self._formatDateEndWeek(e_begin_date)
+        e_end_day = g_const.WEEK_DAYS[e_end_date.weekday()]
+        e_year_to_show = ""
+        if e_begin_date.year != e_end_date.year:
+            e_year_to_show = f"/{e_begin_date.year}"
+        e_dates_str_to_show = f"Semaine du {e_begin_day} {e_begin_date.day}/{e_begin_date.month}{e_year_to_show} au {e_end_day} {e_end_date.day}/{e_end_date.month}/{e_end_date.year}"
+        return e_dates_str_to_show
+    
     def updateDictRecettes(self, p_new_recettes):
         self.scrap.g_temp_recettes = p_new_recettes
     
@@ -43,25 +69,40 @@ class Model:
     
     def getFilesPath(self, p_file_type):
         # p_file_type = 'ingredients'.txt OU 'week'.json
-        file_path_to_return = self.scrap.constructFilesPath()[p_file_type]
+        file_path_to_return = self.scrap.constructFilesPath(self.scrap.g_date_begining_week)[p_file_type]
         return file_path_to_return
     
     def downloadJoanaPngMenu(self):
         e_text_to_return = g_const.OPTIONS['download_menu']
-        e_png_url = g_const.URL_API[:-1]+self.scrap.week_png
-        e_file_path = self.getFilesPath('menu')
-        print(">> Download is starting")
-        try:
-            urllib.request.urlretrieve(e_png_url, e_file_path)
-            self._openFileInNewWindow(e_file_path)
-        except:
-            e_text_to_return = "Erreur de téléchargement"
-            print(">> Download error")
+        e_isPngDownloadYet = self.scrap.cd.isWeekPresentInFolder(self._getDateBeginingWeek(), g_const.SCRAPPED_FOLDER, "png")
+        if e_isPngDownloadYet['bool']:
+            try:
+                print(">> Downloaded yet")
+                e_file_path = self.getFilesPath('menu')
+                self._openFileInNewWindow(e_file_path)
+                e_text_to_return = "Fichier déjà téléchargé"
+            except:
+                e_text_to_return = "Erreur de lecture du fichier"
+                print(">> File reading error")
+            else:
+                e_text_to_return = f'Cible : {g_const.URL_API[:-1]}\n Document présent dans : {e_file_path}'
+                print(">> Download ok")
+                
         else:
-            e_text_to_return = f'Cible : {g_const.URL_API[:-1]}\n Document : {self.scrap.week_png}\n Téléchargé dans : {e_file_path}'
-            print(">> Download ok")
-        finally :
-            return e_text_to_return
+            e_png_url = g_const.URL_API[:-1]+self.scrap.week_png
+            e_file_path = self.getFilesPath('menu')
+            print(">> Download is starting")
+            try:
+                urllib.request.urlretrieve(e_png_url, e_file_path)
+                self._openFileInNewWindow(e_file_path)
+            except:
+                e_text_to_return = "Erreur de téléchargement"
+                print(">> Download error")
+            else:
+                e_text_to_return = f'Cible : {g_const.URL_API[:-1]}\n Document : {self.scrap.week_png}\n Téléchargé dans : {e_file_path}'
+                print(">> Download ok")
+            finally :
+                return e_text_to_return
     
     def forceScrapping(self):
         e_text_to_return = self.scrap.scrapCurrentWeek()
@@ -157,4 +198,4 @@ class Model:
             os.startfile(p_file_path)
         else:
             os.system('xdg-open ' + p_file_path)
-            
+

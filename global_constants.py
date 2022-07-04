@@ -16,3 +16,5 @@ OPTIONS = {
     'force_scrap' : "Force to scrap /!\\", 
     'quit_app' : "Quitter",
     }
+SCRAPPED_FOLDER = "scrapped"
+WEEK_FILE_PREFIXE = SCRAPPED_FOLDER + "/joanna_scrap_"

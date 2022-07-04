@@ -7,8 +7,11 @@ Created on June 18, 2022
 import config
 # constants available in the whole app
 import global_constants as g_const
+# dependency
+from model_checkDate import ModelCheckDate
 # # #
 import lib_display as ds
+from datetime import date, datetime, timedelta
 from fake_useragent import UserAgent 
 import sys, requests, json, random
 # to send an email
@@ -21,6 +24,7 @@ class ModelScrapping:
     Classdocs
     '''
     def __init__(self):
+        self.cd = ModelCheckDate()
         self.LOGIN_MAIL = config.EMAIL
         self.LOGIN_PWD = config.PASSWORD
         self.SMTP_ADDRESS = config.SMTP_ADDRESS
@@ -47,8 +51,7 @@ class ModelScrapping:
         </body>
         </html>
         '''
-        self.WEEK_FILE_PREFIXE = "scrapped/joanna_scrap_"
-        self.week_date_deb = "default"
+        self.g_date_begining_week = "default"
         self.header = {}
         self.current_session = {}
         self.week_png = ""
@@ -75,16 +78,20 @@ class ModelScrapping:
             e_results_to_return['bool'] = True
         finally:
             return e_results_to_return
-    
+         
+    def isWeekPresentInFolder(p_date, p_folder, p_ext):
+        return cd.isWeekPresentInFolder(p_date, p_folder, p_ext)
+        
+            
     def _initAppScrapping(self):
         e_text_to_return = ""
         # test if the joana's week have been scrapped yet
-        self._getSessionHeader
+        self._getSessionHeader()
         with self._login() as e_current_session :
             self._printAccountSessionInfo()
             self._getJoanaSessionMetas()
             ds.printn()
-            if self._isWeekFile():
+            if self._isWeekFile(self.g_date_begining_week):
                 print(">> Week scrapped yet")
                 e_text_to_return += ">> La semaine a déjà été récupéré chez Joana"
                 e_text_to_return += "\n"
@@ -103,11 +110,12 @@ class ModelScrapping:
                 e_text_to_return += ">> Envoie d'un mail de notification"
                 e_text_to_return += "\n"
                 self._mailNotif()
-            self.files_path = self.constructFilesPath()
+            self.files_path = self.constructFilesPath(self.g_date_begining_week)
         return e_text_to_return
 
+        
     def _initRecettesDatas(self):
-        with open(self.constructFilesPath()['week'], "r") as l_infile:
+        with open(self.constructFilesPath(self.g_date_begining_week)['week'], "r") as l_infile:
             self.g_temp_recettes = json.load(l_infile)
         self._initPortionsToOne()
     
@@ -121,7 +129,7 @@ class ModelScrapping:
                 # set portion to 1
                 l1_day_meal['portions'] = 1
     
-    def _getSessionHeader():
+    def _getSessionHeader(self):
         e_header = {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-encoding': 'gzip, deflate, br',
@@ -171,7 +179,8 @@ class ModelScrapping:
 
     def _getJoanaSessionMetas(self):
         e_menu_semaine = self._getJsonAnswer('meal-plan/')
-        self.week_date_deb = e_menu_semaine['beginning_date'].split(':', 1)[0]
+        self.g_date_begining_week = e_menu_semaine['beginning_date'].split(':', 1)[0][:10]
+        print(self.g_date_begining_week)
         self.week_png = e_menu_semaine['pdf']
         self.days_uuid = [l_day['uuid'] for l_day in e_menu_semaine['weekdays']]
 
@@ -182,19 +191,47 @@ class ModelScrapping:
             e_json_datas = l_datas.json()
         return e_json_datas
 
-    def _isWeekFile(self):
+    def _isWeekFile(self, p_joana_date):
         try:
-            with open(self.constructFilesPath()['week'], 'r'):
+            with open(self.constructFilesPath(p_joana_date)['week'], 'r'):
                 return True
         except (FileNotFoundError, IOError):
             return False   
     
-    def constructFilesPath(self):
+    def constructFilesPath(self, p_joana_date):
         e_files_path =  {}
-        e_files_path['week'] = self.WEEK_FILE_PREFIXE + self.week_date_deb + ".json"
-        e_files_path['ingredients'] = self.WEEK_FILE_PREFIXE + 'ingredients_' + self.week_date_deb + ".txt"
-        e_files_path['menu'] = self.WEEK_FILE_PREFIXE + 'menu_' + self.week_date_deb + ".png"
+        e_files_path['week'] = g_const.WEEK_FILE_PREFIXE + p_joana_date + ".json"
+        e_files_path['ingredients'] = g_const.WEEK_FILE_PREFIXE + 'ingredients_' + p_joana_date + ".txt"
+        e_files_path['menu'] = g_const.WEEK_FILE_PREFIXE + 'menu_' + p_joana_date + ".png"
         return e_files_path 
+    '''
+    def _getDateFromFilePath(self, p_file_path : str):
+        #joanna_scrap_2022-05-15T22
+        e_date = p_file_path.split('_', -1)
+        e_date = p_date_to_format.split('T', 1)
+        e_datetime_to_return = date.fromisoformat(e_date[0])
+        e_datetime_to_return += timedelta(days=1)
+        return e_datetime_to_return
+    
+    def _formatDateEndWeek(self, p_datetime_beginning_week : _formatDateBeginingWeek):
+        e_datetime_end_week_to_return = p_datetime_beginning_week + timedelta(days=6)
+        return e_datetime_end_week_to_return
+    
+    def formatDatesToShowInStr(self):
+        e_begin_date = self._getDateBeginingWeek()
+        e_begin_date = self._formatDateBeginingWeek(e_begin_date)
+        e_begin_day = g_const.WEEK_DAYS[e_begin_date.weekday()]
+        e_end_date = self._formatDateEndWeek(e_begin_date)
+        e_end_day = g_const.WEEK_DAYS[e_end_date.weekday()]
+        e_year_to_show = ""
+        if e_begin_date.year != e_end_date.year:
+            e_year_to_show = f"/{e_begin_date.year}"
+        e_dates_str_to_show = f"Semaine du {e_begin_day} {e_begin_date.day}/{e_begin_date.month}{e_year_to_show} au {e_end_day} {e_end_date.day}/{e_end_date.month}/{e_end_date.year}"
+        return e_dates_str_to_show
+    '''
+    def _findCurrentWeekDate(self):
+        pass
+        
     
     def scrapCurrentWeek(self):
         e_text_to_return = '\n'
@@ -206,8 +243,8 @@ class ModelScrapping:
         
         e_infos_week = [self._getJsonAnswer("weekday/", l_uuid) for l_uuid in self.days_uuid]
         
-        e_text_to_return = e_text_to_return + "\n\n###" +  self.week_date_deb + "###\n\n"
-        print("\n\n###",  self.week_date_deb, "###\n\n" )
+        e_text_to_return = e_text_to_return + "\n\n###" +  self.g_date_begining_week + "###\n\n"
+        print("\n\n###",  self.g_date_begining_week, "###\n\n" )
         
         e_recette_uuid = ''
         for l0_i, l0_day in enumerate(g_const.WEEK_DAYS):
@@ -253,7 +290,7 @@ class ModelScrapping:
                         e_text_to_return = e_text_to_return + '    > "' + e_recettes[l0_i][l0_k]['ingredients'][l3_j]['name'] + '"'
                         print(e_recettes[l0_i][l0_k]['ingredients'][l3_j]['name'])
         e_json_object = json.dumps(e_recettes, indent = 4)
-        with open(self.constructFilesPath()['week'], "w") as l_outfile:
+        with open(self.constructFilesPath(self.g_date_begining_week)['week'], "w") as l_outfile:
             l_outfile.write(e_json_object)
         return e_text_to_return
 

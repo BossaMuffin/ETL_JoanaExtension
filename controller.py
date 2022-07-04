@@ -69,6 +69,8 @@ class Controller:
             self.view.makeDaysFrames()
             self.view.showNavButtons()
             self.view.var_message_to_show.set(self.view.CONTENT_MESSAGE[1])
+            e_week_dates = self.model.formatDatesToShowInStr()
+            self.view.var_subtitle_to_show.set(e_week_dates)
         else:
             self.view.var_start_btn_txt.set("Réessayer")
         
