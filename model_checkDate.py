@@ -46,8 +46,11 @@ class ModelCheckDate():
     
     def _getDateOfLastSunday(self, p_date : _getDateFromFilePath):
         p_date_iso = date.fromisoformat(p_date)
+        e_last_sunday = p_date_iso
         e_date_day = p_date_iso.weekday()
-        e_last_sunday = p_date_iso - timedelta(days=e_date_day+1)
+        print(e_date_day)
+        if e_date_day != 6:
+            e_last_sunday = p_date_iso - timedelta(days=e_date_day+1)
         return e_last_sunday
     
     def _isFileAndExtMask(self, p_folder_path : str, p_file : str, p_ext : str = "json"):
