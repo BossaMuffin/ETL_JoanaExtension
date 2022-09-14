@@ -19,7 +19,6 @@ from time import strftime, sleep
 import sys
 
 
-
 class Controller:
     '''
     Classdocs
@@ -62,7 +61,7 @@ class Controller:
     
     def setRecettesDatas(self):
         print(">> Start the model")
-        self.view.var_message_to_show.set("... Attendons quelques secondes ...")
+        self.view.var_message_to_show.set("... Attendons, fais-toi un café et reviens dans quelques minutes ...")
         self.view.update()
         e_results = self.model.start()
         self.view.var_message_to_show.set(e_results['text'])
@@ -144,8 +143,3 @@ class Controller:
         p_var_btn_txt.set(e_new_text_btn)
         print(">> ", e_temp_recettes[str(p_day_id)][str(p_meal_id)]['name'], " to ", str(p_meal_scale.get()))
 
-        
-if __name__== "__main__":
-    # # SCRAPPING JOANA&VOUS 
-    joana_patch = Controller(Model(), TkView())
-    joana_patch.start()

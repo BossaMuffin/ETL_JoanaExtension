@@ -12,7 +12,7 @@ from model_checkDate import ModelCheckDate
 # # #
 import lib_display as ds
 from datetime import date, datetime, timedelta
-from fake_useragent import UserAgent 
+#from fake_useragent import UserAgent 
 import sys, requests, json, random
 # to send an email
 import smtplib, ssl
@@ -106,10 +106,10 @@ class ModelScrapping:
                 print(">> Scrapping done")
                 e_text_to_return += ">> Processus terminé"
                 e_text_to_return += "\n"
-                print(">> Sending a notif email ...")
-                e_text_to_return += ">> Envoie d'un mail de notification"
-                e_text_to_return += "\n"
-                self._mailNotif()
+                #print(">> Sending a notif email ...")
+                #e_text_to_return += ">> Envoie d'un mail de notification"
+                #e_text_to_return += "\n"
+                #self._mailNotif()
             self.files_path = self.constructFilesPath(self.g_date_begining_week)
         return e_text_to_return
 
@@ -148,6 +148,7 @@ class ModelScrapping:
             'Accept': '*/*', 
             'Connection': 'keep-alive'}
         # Add a header giving a random user agent
+        '''
         try: 
             e_ua = UserAgent().random
             e_header['User-Agent'] = e_ua
@@ -155,6 +156,7 @@ class ModelScrapping:
             print(">> Index Error on Fake User Agent")
         else:
             print(">> Unknown User-Agent Error")
+        '''
         self.header = e_header
         
     # Log to Joann&vous
@@ -294,7 +296,7 @@ class ModelScrapping:
             l_outfile.write(e_json_object)
         return e_text_to_return
 
-    
+    '''
     def _mailNotif(self):
         # on crée un e-mail
         e_message = MIMEMultipart("alternative")
@@ -320,3 +322,4 @@ class ModelScrapping:
                 print(">> Mail notif sended : \n",
                       "   to   : ", self.SMTP_RECEIV_MAIL, "\n",
                       "   from : ", self.SMTP_LOGIN_MAIL)
+    '''
