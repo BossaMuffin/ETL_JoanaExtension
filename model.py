@@ -1,27 +1,33 @@
-'''
+"""
 Created on June 18, 2022
 @author: BalthMhs
 @society: BossaMuffinConnected
-'''
+"""
+import copy
+import os
+import sys
+import urllib.request
+from datetime import date, timedelta
+
+import pandas as pd
+
 # constants available in the whole app
 import global_constants as g_const
-# dependency
-from model_scrapping import ModelScrapping
 # # #
 import lib_display as ds
-from datetime import date, timedelta
-import pandas as pd
-import copy, sys, os
-import urllib.request
+# dependency
+from model_scrapping import ModelScrapping
+
 
 class Model:
-    '''
+    """
     Classdocs
-    '''
-    
+    """
+
     def __init__(self):
         self.scrap = ModelScrapping()
-        # Les choix proposés au menu du programme sont compris entre l'indice 1 et l'avant-dernier (réservés au titre et à la question) 
+        # Les choix proposés au menu du programme sont compris entre l'indice 1 et l'avant-dernier (réservés au titre
+        # et à la question)
         self.g_asked_day = 0
         self.g_asked_day_in_app = 0
 
@@ -29,23 +35,23 @@ class Model:
         e_results_to_return = self.scrap.start()
         print(e_results_to_return['text'])
         return e_results_to_return
-    
+
     def getDictRecettes(self):
         return self.scrap.g_temp_recettes
-    
+
     def _getDateBeginingWeek(self):
         return self.scrap.g_date_begining_week
-    
-    def _formatDateBeginingWeek(self, p_date_to_format : _getDateBeginingWeek):
+
+    def _formatDateBeginingWeek(self, p_date_to_format: _getDateBeginingWeek):
         e_date = p_date_to_format.split('T', 1)
         e_datetime_to_return = date.fromisoformat(e_date[0])
         e_datetime_to_return += timedelta(days=1)
         return e_datetime_to_return
-    
-    def _formatDateEndWeek(self, p_datetime_beginning_week : _formatDateBeginingWeek):
+
+    def _formatDateEndWeek(self, p_datetime_beginning_week: _formatDateBeginingWeek):
         e_datetime_end_week_to_return = p_datetime_beginning_week + timedelta(days=6)
         return e_datetime_end_week_to_return
-    
+
     def formatDatesToShowInStr(self):
         e_begin_date = self._getDateBeginingWeek()
         e_begin_date = self._formatDateBeginingWeek(e_begin_date)
@@ -57,24 +63,25 @@ class Model:
             e_year_to_show = f"/{e_begin_date.year}"
         e_dates_str_to_show = f"Semaine du {e_begin_day} {e_begin_date.day}/{e_begin_date.month}{e_year_to_show} au {e_end_day} {e_end_date.day}/{e_end_date.month}/{e_end_date.year}"
         return e_dates_str_to_show
-    
+
     def updateDictRecettes(self, p_new_recettes):
         self.scrap.g_temp_recettes = p_new_recettes
-    
+
     def update1Portion(self, p_day_id, p_meal_id, p_new_quantity):
-        self.scrap.g_temp_recettes[str(p_day_id)][str(p_meal_id)]['portions'] = p_new_quantity 
-    
+        self.scrap.g_temp_recettes[str(p_day_id)][str(p_meal_id)]['portions'] = p_new_quantity
+
     def getListWeekDays(self):
         return self.scrap.WEEK_DAYS
-    
+
     def getFilesPath(self, p_file_type):
         # p_file_type = 'ingredients'.txt OU 'week'.json
         file_path_to_return = self.scrap.constructFilesPath(self.scrap.g_date_begining_week)[p_file_type]
         return file_path_to_return
-    
+
     def downloadJoanaPngMenu(self):
         e_text_to_return = g_const.OPTIONS['download_menu']
-        e_isPngDownloadYet = self.scrap.cd.isWeekPresentInFolder(self._getDateBeginingWeek(), g_const.SCRAPPED_FOLDER, "png")
+        e_isPngDownloadYet = self.scrap.cd.isWeekPresentInFolder(self._getDateBeginingWeek(), g_const.SCRAPPED_FOLDER,
+                                                                 "png")
         if e_isPngDownloadYet['bool']:
             try:
                 print(">> Downloaded yet")
@@ -87,9 +94,9 @@ class Model:
             else:
                 e_text_to_return = f'Cible : {g_const.URL_API[:-1]}\n Document présent dans : {e_file_path}'
                 print(">> Download ok")
-                
+
         else:
-            e_png_url = g_const.URL_API[:-1]+self.scrap.week_png
+            e_png_url = g_const.URL_API[:-1] + self.scrap.week_png
             e_file_path = self.getFilesPath('menu')
             print(">> Download is starting")
             try:
@@ -101,13 +108,13 @@ class Model:
             else:
                 e_text_to_return = f'Cible : {g_const.URL_API[:-1]}\n Document : {self.scrap.week_png}\n Téléchargé dans : {e_file_path}'
                 print(">> Download ok")
-            finally :
+            finally:
                 return e_text_to_return
-    
+
     def forceScrapping(self):
         e_text_to_return = self.scrap.scrapCurrentWeek()
         return e_text_to_return
-    
+
     def showMealsByDay(self):
         e_temp_recettes = self.getDictRecettes()
         e_text_to_return = ""
@@ -127,10 +134,10 @@ class Model:
 
             if int(l0_day_meal['cooking_time']) and l0_day_meal['cooking_time'] > 0:
                 e_text_to_return += f"\n{'-':<5}{'et':<10}{l0_day_meal['cooking_time']:<5}{'min de cuisson'}"
-            
+
         print(e_text_to_return)
-        return e_text_to_return 
-    
+        return e_text_to_return
+
     def showIngredients(self):
         e_text_to_return = g_const.OPTIONS['list_ingredients'] + " :\n"
         for l0_i, l0_ingredient_group in self._orderIngredientsInDf().items():
@@ -140,11 +147,11 @@ class Model:
         return e_text_to_return
 
     def _orderIngredientsInDf(self):
-        e_df_ingredients = pd.DataFrame(columns = ['Category', 'Name' , 'Quantity', 'Symbol'])
+        e_df_ingredients = pd.DataFrame(columns=['Category', 'Name', 'Quantity', 'Symbol'])
         e_nb_lines = 0
         e_temp_recettes = {}
         e_temp_recettes = copy.deepcopy(self.getDictRecettes())
-        for l0_day_meals in e_temp_recettes.values():  
+        for l0_day_meals in e_temp_recettes.values():
             for l1_day_meal in l0_day_meals.values():
                 if l1_day_meal['portions'] != 0:
                     for l2_ingredient in l1_day_meal['ingredients'].values():
@@ -156,21 +163,22 @@ class Model:
                             l2_symbol = ""
                         # uniformisation des unités
                         if l2_symbol == 'cs':
-                            l2_ingredient['quantity'] = l2_ingredient['quantity']*3
+                            l2_ingredient['quantity'] = l2_ingredient['quantity'] * 3
                             l2_symbol = 'cc'
                         elif l2_symbol == 'kg':
-                            l2_ingredient['quantity'] = l2_ingredient['quantity']*1000
+                            l2_ingredient['quantity'] = l2_ingredient['quantity'] * 1000
                             l2_symbol = 'g'
                         elif l2_symbol == 'cl':
-                            l2_ingredient['quantity'] = l2_ingredient['quantity']*10
+                            l2_ingredient['quantity'] = l2_ingredient['quantity'] * 10
                             l2_symbol = 'ml'
                         elif l2_symbol == 'dl':
-                            l2_ingredient['quantity'] = l2_ingredient['quantity']*100
+                            l2_ingredient['quantity'] = l2_ingredient['quantity'] * 100
                             l2_symbol = 'ml'
                         elif l2_symbol == 'l':
-                            l2_ingredient['quantity'] = l2_ingredient['quantity']*1000
+                            l2_ingredient['quantity'] = l2_ingredient['quantity'] * 1000
                             l2_symbol = 'ml'
-                        e_df_ingredients.loc[e_nb_lines] = [ l2_ingredient['category']['name'], l2_ingredient['name'], l2_ingredient['quantity'], l2_symbol ]
+                        e_df_ingredients.loc[e_nb_lines] = [l2_ingredient['category']['name'], l2_ingredient['name'],
+                                                            l2_ingredient['quantity'], l2_symbol]
                         l2_ingredient['unit_of_measure']['symbol'] = l2_symbol
                         e_nb_lines += 1
         e_df_ingredients_sorted = e_df_ingredients.groupby(['Category', 'Name', 'Symbol']).sum()
@@ -178,12 +186,12 @@ class Model:
 
     def exportIngredientsInFile(self, p_gdh):
         e_file_path = self.getFilesPath('ingredients')
-        e_text_to_return = g_const.OPTIONS['export_ingredients'] + " :\n"                                    
+        e_text_to_return = g_const.OPTIONS['export_ingredients'] + " :\n"
         e_nb_lines = 0
         with open(e_file_path, "w") as l0_outfile:
             l0_outfile.write("LISTE DES INGREDIENTS DE LA SEMAINE \n\n-----------------\n")
             l0_outfile.write("Mis à jour le " + p_gdh + "\n-----------------\n\n")
-            
+
             for l1_i, l1_ingredient_group in self._orderIngredientsInDf().items():
                 l1_line = f"{'+':<5}{l1_ingredient_group}"
                 e_text_to_return = e_text_to_return + "\n" + l1_line
@@ -192,10 +200,16 @@ class Model:
         self._openFileInNewWindow(e_file_path)
         e_text_to_return += str(e_nb_lines)
         return e_text_to_return
-    
+
     def _openFileInNewWindow(self, p_file_path):
         if "win" in sys.platform:
-            os.startfile(p_file_path)
+            l_safe_file_path = r'/'.join((os.getcwd(), p_file_path))
+            print(l_safe_file_path)
+            try:
+                os.startfile(l_safe_file_path)
+            except FileNotFoundError as err:
+                print(f'{l_safe_file_path} est introuvable')
+                print(f'Tu peux l\'ouvrir directement dans {os.getcwd()}/{g_const.SCRAPPED_FOLDER}')
+
         else:
             os.system('xdg-open ' + p_file_path)
-

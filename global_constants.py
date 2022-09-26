@@ -1,8 +1,8 @@
-'''
+"""
 Created on June 28, 2022
 @author: BalthMhs
 @society: BossaMuffinConnected
-'''
+"""
 URL_LOGIN = 'https://api.joanaetvous.com/auth/jwt/create/'
 URL_API = 'https://api.joanaetvous.com/'
 URL_APP = 'https://app.joanaetvous.com/'

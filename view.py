@@ -1,14 +1,13 @@
-'''
+"""
 Created on June 18, 2022
 @author: BalthMhs
 @society: BossaMuffinConnected
-'''
+"""
 # constants available in the whole app
 import global_constants as g_const
 # # #
 import lib_display as ds
 import tkinter as tk
-from tkinter import ttk
 
 class TkView(tk.Tk):
     '''
@@ -268,7 +267,7 @@ class TkView(tk.Tk):
             self.btn_choosing_day_in_app[l0_i].pack_forget()
     
     def _showContent(self):
-        self.frame_content.pack(side='left', expand='yes', fill='both', padx=self.PADX_CONTENT)
+        self.frame_content.pack(side='left', expand=1, fill='both', padx=self.PADX_CONTENT)
 
     def showContentMessage(self):
         self.message_content.pack(fill='both', ipady=10, ipadx=50)

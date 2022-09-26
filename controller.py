@@ -1,28 +1,24 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-'''
+"""
 Created on June 18, 2022
 @author: BalthMhs
 @society: BossaMuffinConnected
-'''
+"""
 # constants available in the whole app
-import global_constants as g_const
-# MVC 
-from model import Model
-from view import TkView
+# MVC
 # # #
 import lib_display as ds
 ds.printn()
 from datetime import datetime
-from time import strftime, sleep
 import sys
 
 
 class Controller:
-    '''
+    """
     Classdocs
-    '''
+    """
     
     def __init__(self, p_model, p_view):
         self.model = p_model
