@@ -8,5 +8,10 @@
 ### Nécessaire au fonctionnement
 #### EMAIL = "email de connexion à Joana"
 #### PASSWORD = "mot de passe de connexion à Joana"
-
+### Optionnel (non fonctionnel > to fix)
+#### SMTP_RECEIVER = "un email sur lequel envoyer des emails de notification"
+#### SMTP_ADDRESS = "le serveur smtp d'envoi"
+#### SMTP_PORT = 465
+#### SMTP_EMAIL = "email émetteur du mail"
+#### SMTP_PASSWORD = "mot de passe utilisateur de cette boite mail d'envoi"
 ## éxécuter "python contoller.py" dans un terminal
