@@ -14,4 +14,4 @@
 #### SMTP_PORT = 465
 #### SMTP_EMAIL = "email émetteur du mail"
 #### SMTP_PASSWORD = "mot de passe utilisateur de cette boite mail d'envoi"
-## éxécuter "python contoller.py" dans un terminal
+## éxécuter "python3 joana.py" dans un terminal
